@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -11,14 +14,14 @@
   --error-hover: #b91c1c;
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
     --primary: #3b82f6;
     --primary-hover: #2563eb;
   }
-}
+} */
 
 body {
   color: var(--foreground);
@@ -28,7 +31,7 @@ body {
 
 /* Add these new styles */
 .capture-section {
-  @apply bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 w-full max-w-2xl;
+  @apply bg-white p-8 rounded-xl shadow-lg border border-gray-200 w-full max-w-2xl;
 }
 
 .action-button {
@@ -37,7 +40,7 @@ body {
 }
 
 .primary-button {
-  @apply action-button bg-primary text-white hover:bg-primary-hover;
+  @apply action-button bg-gray-700 text-white hover:bg-gray-600;
 }
 
 .warning-button {
@@ -45,18 +48,18 @@ body {
 }
 
 .secondary-button {
-  @apply action-button bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700;
+  @apply action-button bg-gray-100 hover:bg-gray-200;
 }
 
 .textarea-container {
-  @apply relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 
+  @apply relative overflow-hidden rounded-lg border border-gray-200
          focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent
          transition-all duration-200;
 }
 
 .textarea {
   @apply w-full p-4 bg-transparent resize-none outline-none
-         text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600;
+         text-gray-900 placeholder-gray-400;
 }
 
 .record-button {
@@ -65,7 +68,7 @@ body {
 }
 
 .record-button-idle {
-  @apply bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700;
+  @apply bg-gray-100 hover:bg-gray-200;
 }
 
 .record-button-recording {
@@ -73,10 +76,10 @@ body {
 }
 
 .analysis-card {
-  @apply bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg mb-4;
+  @apply bg-gray-50 p-4 rounded-lg mb-4;
 }
 
 .feedback-message {
-  @apply text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800
-         text-green-800 dark:text-green-200;
+  @apply text-center p-4 bg-green-50 rounded-lg border border-green-200
+         text-green-800;
 }
