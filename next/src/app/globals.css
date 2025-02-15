@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --error: #dc2626;
+  --error-hover: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Add these new styles */
+.capture-section {
+  @apply bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 w-full max-w-2xl;
+}
+
+.action-button {
+  @apply rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium h-11 px-6 
+         shadow-sm hover:shadow-md active:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.primary-button {
+  @apply action-button bg-primary text-white hover:bg-primary-hover;
+}
+
+.warning-button {
+  @apply action-button bg-error text-white hover:bg-error-hover;
+}
+
+.secondary-button {
+  @apply action-button bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700;
+}
+
+.textarea-container {
+  @apply relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 
+         focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent
+         transition-all duration-200;
+}
+
+.textarea {
+  @apply w-full p-4 bg-transparent resize-none outline-none
+         text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600;
+}
+
+.record-button {
+  @apply absolute right-3 bottom-3 p-2.5 rounded-full transition-all duration-200
+         flex items-center justify-center;
+}
+
+.record-button-idle {
+  @apply bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700;
+}
+
+.record-button-recording {
+  @apply bg-error hover:bg-error-hover text-white;
+}
+
+.analysis-card {
+  @apply bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg mb-4;
+}
+
+.feedback-message {
+  @apply text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800
+         text-green-800 dark:text-green-200;
+}
