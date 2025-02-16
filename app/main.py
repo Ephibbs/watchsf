@@ -7,6 +7,7 @@ import requests
 
 import openai
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -18,6 +19,15 @@ load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # List of allowed origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Configure OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -184,6 +194,66 @@ class Report311Generator:
         except Exception as e:
             print(f"Error submitting to test server: {str(e)}")
             raise
+
+class Call911Service:
+    def __init__(self):
+        self.api_key = os.getenv("VAPI_API_KEY")
+        self.base_url = "https://api.vapi.ai/call"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+    
+    async def make_emergency_call(self, emergency_details: Dict) -> Dict:
+        """Make an outbound call to report emergency"""
+        try:
+            # In production, this would be the actual 911 number
+            dummy_emergency_number = "+6502671201"
+            
+            payload = {
+                "name": "Emergency Call",
+                "type": "outboundPhoneCall",
+                "phoneNumber": {
+                    "number": dummy_emergency_number
+                },
+                "customer": {
+                    "number": dummy_emergency_number
+                },
+                "assistant": {
+                    "name": "Emergency Reporter",
+                    "voice": {
+                        "provider": "azure",
+                        "voiceId": "en-US-JennyNeural"
+                    },
+                    "firstMessage": self._generate_emergency_script(emergency_details)
+                }
+            }
+            
+            response = requests.post(
+                self.base_url,
+                headers=self.headers,
+                json=payload
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"Failed to initiate emergency call: {response.text}")
+                
+            return response.json()
+        except Exception as e:
+            print(f"Error making emergency call: {str(e)}")
+            raise
+
+    def _generate_emergency_script(self, emergency_details: Dict) -> str:
+        """Generate the initial script for the emergency call"""
+        location = emergency_details.get("location", "unknown location")
+        details = emergency_details.get("emergency_details", "")
+        
+        return f"""
+        Hello, I am an automated emergency reporting system.
+        I need to report an emergency at {location}.
+        The situation is as follows: {details}
+        Please dispatch emergency services to this location immediately.
+        """
 
 @app.post("/evaluate")
 async def evaluate_emergency(
@@ -374,22 +444,40 @@ async def evaluate_emergency(
 
         elif parsed["trigger"] == "911":
             print("\n=== Preparing 911 Response ===")
-            print("✓ Emergency details captured")
-            print(f"✓ Location included: {bool(location)}")
-            print(f"✓ Image included: {bool(image_base64_str)}")
-            print("✓ Confirmation needed: True")
-            print("✓ Recommended action: This appears to be an emergency. Would you like us to contact 911?")
+            emergency_details = {
+                "emergency_details": text,
+                "location": location
+            }
             
-            result = EmergencyResponse(
-                level=parsed["level"],
-                confidence=parsed["confidence"],
-                reasoning=parsed["reasoning"],
-                recommended_action="This appears to be an emergency. Would you like us to contact 911?",
-                trigger=parsed["trigger"],
-                needs_confirmation=True,
-                report_data={"emergency_details": text, "location": location},
-                image_base64=image_base64_str
-            )
+            needs_confirmation = False  # Change this to True if you want confirmation flow
+            
+            if needs_confirmation:
+                # Confirmation flow
+                result = EmergencyResponse(
+                    level=parsed["level"],
+                    confidence=parsed["confidence"],
+                    reasoning=parsed["reasoning"],
+                    recommended_action="This appears to be an emergency. Would you like us to contact 911?",
+                    trigger=parsed["trigger"],
+                    needs_confirmation=True,
+                    report_data=emergency_details,
+                    image_base64=image_base64_str
+                )
+            else:
+                # Immediate action flow
+                emergency_service = Call911Service()
+                call_result = await emergency_service.make_emergency_call(emergency_details)
+                
+                result = EmergencyResponse(
+                    level=parsed["level"],
+                    confidence=parsed["confidence"],
+                    reasoning=parsed["reasoning"],
+                    recommended_action="Emergency services have been contacted.",
+                    trigger=parsed["trigger"],
+                    needs_confirmation=False,
+                    report_data={"emergency_details": text, "location": location, "call_result": call_result},
+                    image_base64=image_base64_str
+                )
 
         else:  # NO_CONCERN case
             print("\n=== Preparing NO_CONCERN Response ===")
@@ -447,11 +535,14 @@ async def confirm_311_submission(
 @app.post("/confirm-911")
 async def confirm_911_call(emergency_details: Dict):
     try:
-        # Here you would implement the actual 911 service integration
+        emergency_service = Call911Service()
+        call_result = await emergency_service.make_emergency_call(emergency_details)
+        
         return {
             "status": "success",
             "message": "Emergency services have been notified",
-            "details": {
+            "call_details": call_result,
+            "emergency_info": {
                 "emergency_text": emergency_details.get("emergency_details"),
                 "location": emergency_details.get("location")
             }
