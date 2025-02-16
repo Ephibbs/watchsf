@@ -23,7 +23,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # List of allowed origins
+    allow_origins=["https://localhost:3000"],  # List of allowed origins
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
@@ -60,7 +60,7 @@ class Report311Generator:
     def __init__(self, client: OpenAI):
         self.client = client
         # Use local test server instead of real SF 311
-        self.base_url = "http://localhost:3000"
+        self.base_url = "http://localhost:3001"
         
     async def generate_report(self, situation: str, location: str, service_code: str, image_data: Optional[bytes] = None, image_description: Optional[str] = None) -> Dict:
         """Generate a detailed 311 report using AI"""
@@ -577,6 +577,7 @@ async def confirm_311_submission(
     image_base64: Optional[str] = None
 ):
     try:
+        report_data = report_data.get("report_data")
         image_data = None
         if image_base64:
             # Convert base64 back to bytes
@@ -595,6 +596,7 @@ async def confirm_311_submission(
 @app.post("/confirm-911")
 async def confirm_911_call(emergency_details: Dict):
     try:
+        emergency_details = emergency_details.get("report_data")
         emergency_service = Call911Service()
         # Create assistant and make the call
         call_result = await emergency_service.create_emergency_assistant(emergency_details)
