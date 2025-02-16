@@ -35,7 +35,7 @@ wandb.init(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://localhost:3000"],  # List of allowed origins
+    allow_origins=["https://localhost:3001"],  # List of allowed origins
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
@@ -638,7 +638,7 @@ async def evaluate_emergency(
             "classification_level": parsed["level"],
             "confidence": parsed["confidence"],
             "trigger": parsed["trigger"],
-            "response_time": response.response_ms / 1000.0  # Convert to seconds
+            "response_time": response.response_ms / 1000.0 if hasattr(response, 'response_ms') else None  # Convert to seconds if available
         })
 
         if image and image_description:
@@ -659,6 +659,7 @@ async def evaluate_emergency(
 
     except Exception as e:
         # Log errors
+        print(f"Error: {e}")
         wandb.log({
             "request_id": run_id if 'run_id' in locals() else None,
             "error": str(e),
