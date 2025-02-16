@@ -536,6 +536,7 @@ async def confirm_311_submission(
 @app.post("/confirm-911")
 async def confirm_911_call(emergency_details: Dict):
     try:
+        emergency_details = emergency_details.get("report_data")
         emergency_service = Call911Service()
         call_result = await emergency_service.make_emergency_call(emergency_details)
         
