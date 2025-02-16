@@ -1,0 +1,6 @@
+{
+  "internal": true,
+  "main": "../dist/index.ui.js",
+  "module": "../dist/index.ui.esm.js",
+  "types": "../dist/index.ui.d.ts"
+}
