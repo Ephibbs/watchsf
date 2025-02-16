@@ -35,10 +35,15 @@ wandb.init(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://localhost:3000"],  # List of allowed origins
+    allow_origins=[
+        "http://localhost:3000",
+        "https://localhost:3000",  # Add HTTPS version
+        "http://localhost:8000",
+        "https://localhost:8000"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Configure OpenAI
@@ -386,6 +391,7 @@ async def evaluate_emergency(
     """
     This endpoint classifies situations using the 'o3-mini-2025-01-31' model with structured output.
     """
+    print(f"Received text: {text}", f"Received location: {location}", f"Received image: {image}")
     try:
         # Start tracking this request
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -444,7 +450,7 @@ async def evaluate_emergency(
         context = await knowledge_base.get_classification_context(text)
         
         prompt = f"""
-        Using the following guidelines and context:
+        Use as an exapmple:
         {context}
 
         Evaluate the following situation and determine if it's an emergency:
@@ -638,7 +644,6 @@ async def evaluate_emergency(
             "classification_level": parsed["level"],
             "confidence": parsed["confidence"],
             "trigger": parsed["trigger"],
-            "response_time": response.response_ms / 1000.0  # Convert to seconds
         })
 
         if image and image_description:
@@ -658,11 +663,16 @@ async def evaluate_emergency(
         return result
 
     except Exception as e:
+        print(f"Error in evaluate_emergency: {str(e)}")  # Add detailed error logging
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         # Log errors
         wandb.log({
             "request_id": run_id if 'run_id' in locals() else None,
             "error": str(e),
-            "error_type": type(e).__name__
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc()
         })
         raise HTTPException(status_code=500, detail=str(e))
 
