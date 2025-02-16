@@ -1,1 +1,0 @@
-{"_runtime":17.303425,"error_type":"AttributeError","has_image":false,"location":"123 Market Street, San Francisco","_timestamp":1.73973041788591e+09,"request_id":"20250216_102654","input_text":"There is a fire in the building at Market Street","_step":1,"error":"'ChatCompletion' object has no attribute 'response_ms'","_wandb":{"runtime":78}}

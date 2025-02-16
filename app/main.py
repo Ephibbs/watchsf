@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
+from llama_index.core import VectorStoreIndex, Document
 
 
 
@@ -326,6 +327,56 @@ class Call911Service:
         I will stay on the line to provide any additional information you need.
         """
 
+class EmergencyKnowledgeBase:
+    def __init__(self):
+        self.llm = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.index = self._create_index()
+    
+    def _create_index(self):
+        # Create sample emergency guidelines documents
+        documents = [
+            Document(text="""
+                Emergency (911) Criteria:
+                - Immediate danger to life
+                - someone is injured
+                - someone is unconscious
+                - danger to property
+                - someone is in danger of harm
+                - Active crimes in progress
+                - Severe medical emergencies
+                - Fire or smoke
+                - Violence or threats of violence
+                -   other emergency issues
+            """),
+            Document(text="""
+                Non-Emergency (311) Criteria:
+                - Graffiti removal
+                - Damaged property
+                - Noise complaints
+                - Street cleaning
+                - Illegal parking
+                - other non-emergency issues
+            """),
+             Document(text="""
+                Non-concern Criteria:
+                - No emergency situation
+                - regular situation 
+                - be aware that user may misunderstand the situation
+            """)
+        ]
+        return VectorStoreIndex.from_documents(documents)
+    
+    async def get_classification_context(self, situation: str) -> str:
+        """Get relevant emergency guidelines for the situation"""
+        query_engine = self.index.as_query_engine()
+        response = query_engine.query(
+            f"What guidelines are relevant for this situation: {situation}"
+        )
+        return str(response)
+
+# Initialize the knowledge base
+knowledge_base = EmergencyKnowledgeBase()
+
 @app.post("/evaluate")
 async def evaluate_emergency(
     text: str = Form(...),
@@ -389,47 +440,13 @@ async def evaluate_emergency(
 
             image_description = vision_response.choices[0].message.content.strip()
         
-        # We can supply a JSON schema so the model returns structured output.
-        # Strict is True to ensure the model doesn't slip away from our format.
-        # Make sure the root "required"/"properties" match exactly what we want returned.
-        schema = {
-            "name": "emergency_classification",
-            "strict": True,
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "level": {
-                        "type": "string",
-                        "description": "EMERGENCY, NON_EMERGENCY, or NO_CONCERN",
-                        "enum": ["EMERGENCY", "NON_EMERGENCY", "NO_CONCERN"]
-                    },
-                    "confidence": {
-                        "type": "number",
-                        "description": "Confidence level from 0.0 to 1.0"
-                    },
-                    "reasoning": {
-                        "type": "string",
-                        "description": "Explanation of why the classification was chosen"
-                    },
-                    "recommended_action": {
-                        "type": "string",
-                        "description": "Advice for user or system on next steps"
-                    },
-                    "trigger": {
-                        "type": "string",
-                        "description": "Which service to trigger: '911', '311', or 'NONE'"
-                    },
-                },
-                "required": ["level", "confidence", "reasoning", "recommended_action", "trigger"],
-                "additionalProperties": False,
-            },
-        }
-        
-        # Schema logging
-        print("\n=== Schema Configuration ===")
-        print(f"Schema: {json.dumps(schema, indent=2)}")
+        # Get relevant context from LlamaIndex
+        context = await knowledge_base.get_classification_context(text)
         
         prompt = f"""
+        Using the following guidelines and context:
+        {context}
+
         Evaluate the following situation and determine if it's an emergency:
         Text: {text}
         Location: {location if location else 'Not provided'}
@@ -464,7 +481,38 @@ async def evaluate_emergency(
             ],
             response_format={
                 "type": "json_schema",
-                "json_schema": schema
+                "json_schema": {
+                    "name": "emergency_classification",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "level": {
+                                "type": "string",
+                                "description": "EMERGENCY, NON_EMERGENCY, or NO_CONCERN",
+                                "enum": ["EMERGENCY", "NON_EMERGENCY", "NO_CONCERN"]
+                            },
+                            "confidence": {
+                                "type": "number",
+                                "description": "Confidence level from 0.0 to 1.0"
+                            },
+                            "reasoning": {
+                                "type": "string",
+                                "description": "Explanation of why the classification was chosen"
+                            },
+                            "recommended_action": {
+                                "type": "string",
+                                "description": "Advice for user or system on next steps"
+                            },
+                            "trigger": {
+                                "type": "string",
+                                "description": "Which service to trigger: '911', '311', or 'NONE'"
+                            },
+                        },
+                        "required": ["level", "confidence", "reasoning", "recommended_action", "trigger"],
+                        "additionalProperties": False,
+                    },
+                }
             }
         )
         
