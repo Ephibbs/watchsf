@@ -287,10 +287,7 @@ export default function Home() {
           <div className="flex justify-center">
             <button 
               className="secondary-button"
-              onClick={() => {
-                setAnalysis(null);
-                setSeverity(null);
-              }}
+              onClick={handleClose}
             >
               Close
             </button>
