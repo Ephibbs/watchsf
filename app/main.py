@@ -60,7 +60,7 @@ class Report311Generator:
     def __init__(self, client: OpenAI):
         self.client = client
         # Use local test server instead of real SF 311
-        self.base_url = "http://localhost:3000"
+        self.base_url = "http://localhost:3001"
         
     async def generate_report(self, situation: str, location: str, service_code: str, image_data: Optional[bytes] = None, image_description: Optional[str] = None) -> Dict:
         """Generate a detailed 311 report using AI"""
@@ -517,6 +517,7 @@ async def confirm_311_submission(
     image_base64: Optional[str] = None
 ):
     try:
+        report_data = report_data.get("report_data")
         image_data = None
         if image_base64:
             # Convert base64 back to bytes

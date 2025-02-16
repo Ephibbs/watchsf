@@ -9,6 +9,7 @@ interface EvaluationResponse {
   reasoning: string;
   recommended_action: string;
   trigger: '911' | '311' | 'NONE';
+  report_data: object;
 }
 
 export default function Home() {
@@ -189,11 +190,7 @@ export default function Home() {
     }
   };
 
-  const sendEmergencyAlert = () => {
-    console.log('Sending emergency alert');
-  };
-
-  const sendNonEmergencyAlert = async () => {
+  const confirmAlert = async (isEmergency: boolean) => {
     try {
       // Convert first image to base64 if it exists
       let imageBase64 = null;
@@ -210,19 +207,14 @@ export default function Home() {
           reader.readAsDataURL(blob);
         });
       }
-
-      const response = await fetch('/confirm-311', {
+      const url = isEmergency ? 'http://localhost:8000/confirm-911' : 'http://localhost:8000/confirm-311';
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          report_data: {
-            text: issueText,
-            severity,
-            analysis,
-            location: address
-          },
+          report_data: analysisResult?.report_data,
           image_base64: imageBase64
         })
       });
@@ -232,8 +224,12 @@ export default function Home() {
       }
 
       const result = await response.json();
-      console.log('311 submission result:', result);
-      setFeedbackMessage('Report sent to 311 services.');
+      console.log('Confirmation result:', result);
+      if (isEmergency) {
+        setFeedbackMessage('Emergency services have been notified.');
+      } else {
+        setFeedbackMessage('Report sent to 311 services.');
+      }
     } catch (error) {
       console.error('Error submitting 311 report:', error);
       alert('Failed to submit 311 report. Please try again.');
@@ -242,10 +238,9 @@ export default function Home() {
 
   const handleAction = async (action: 'emergency' | 'non-emergency') => {
     if (action === 'emergency') {
-      setFeedbackMessage('Emergency services have been notified.');
-      await sendEmergencyAlert();
+      await confirmAlert(true);
     } else {
-      await sendNonEmergencyAlert();
+      await confirmAlert(false);
     }
   };
 
