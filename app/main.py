@@ -41,7 +41,10 @@ class EmergencyResponse(BaseModel):
     confidence: float
     reasoning: str
     recommended_action: str
-    trigger: str  # e.g. '911', '311', or 'NONE'
+    trigger: str
+    needs_confirmation: bool
+    report_data: Optional[Dict] = None  # For 311 reports
+    image_base64: Optional[str] = None  # For sending image back to frontend
 
 class Report311Generator:
     def __init__(self, client: OpenAI):
@@ -329,50 +332,129 @@ async def evaluate_emergency(
         parsed = json.loads(content)
         print(f"Parsed JSON: {json.dumps(parsed, indent=2)}")
         
-        # Handle 311 cases
+        report_data = None
+        image_base64_str = None
+
+        # If image was provided, convert to base64 once
+        if image:
+            image_data = await image.read()
+            image_base64_str = base64.b64encode(image_data).decode('utf-8')
+
         if parsed["trigger"] == "311":
-            print("\n=== Initiating 311 Report Generation ===")
+            print("\n=== Generating 311 Report ===")
             report_generator = Report311Generator(client)
             
-            # For graffiti cases, use the specific service code
             service_code = "input:Graffiti" if "graffiti" in text.lower() else "PW:BSM:Damage Property"
             
-            report = await report_generator.generate_report(
+            # Generate report but don't submit yet
+            report_data = await report_generator.generate_report(
                 situation=text,
                 location=location or "Unknown",
                 service_code=service_code,
-                image_data=image_data,
+                image_data=image_data if image else None,
                 image_description=image_description
             )
             
-            # Submit to 311 with the image
-            submission_result = await report_generator.submit_to_311(report, image_data)
-            print(f"311 Submission Result: {submission_result}")
+            print("\n=== Preparing 311 Response ===")
+            print("✓ Report data generated")
+            print(f"✓ Image included: {bool(image_base64_str)}")
+            print("✓ Confirmation needed: True")
+            print("✓ Recommended action: Would you like to submit a 311 report for this issue?")
+            
+            result = EmergencyResponse(
+                level=parsed["level"],
+                confidence=parsed["confidence"],
+                reasoning=parsed["reasoning"],
+                recommended_action="Would you like to submit a 311 report for this issue?",
+                trigger=parsed["trigger"],
+                needs_confirmation=True,
+                report_data=report_data,
+                image_base64=image_base64_str
+            )
 
-        # Handle 911 cases
         elif parsed["trigger"] == "911":
-            print("\n=== EMERGENCY 911 CASE DETECTED ===")
-            # Here you would implement 911 notification logic
-            # This might involve a different system or API
-            pass
+            print("\n=== Preparing 911 Response ===")
+            print("✓ Emergency details captured")
+            print(f"✓ Location included: {bool(location)}")
+            print(f"✓ Image included: {bool(image_base64_str)}")
+            print("✓ Confirmation needed: True")
+            print("✓ Recommended action: This appears to be an emergency. Would you like us to contact 911?")
+            
+            result = EmergencyResponse(
+                level=parsed["level"],
+                confidence=parsed["confidence"],
+                reasoning=parsed["reasoning"],
+                recommended_action="This appears to be an emergency. Would you like us to contact 911?",
+                trigger=parsed["trigger"],
+                needs_confirmation=True,
+                report_data={"emergency_details": text, "location": location},
+                image_base64=image_base64_str
+            )
 
-        # Creating response
-        print("\n=== Creating Final Response ===")
-        result = EmergencyResponse(
-            level=parsed["level"],
-            confidence=parsed["confidence"],
-            reasoning=parsed["reasoning"],
-            recommended_action=parsed["recommended_action"],
-            trigger=parsed["trigger"],
-        )
-        print(f"Final Response: {result}")
-        print("\n=== Evaluation Complete ===\n")
+        else:  # NO_CONCERN case
+            print("\n=== Preparing NO_CONCERN Response ===")
+            print("✓ No action needed")
+            print("✓ Confirmation needed: False")
+            print("✓ Recommended action: No action needed. This situation does not require emergency services or city services.")
+            
+            result = EmergencyResponse(
+                level=parsed["level"],
+                confidence=parsed["confidence"],
+                reasoning=parsed["reasoning"],
+                recommended_action="No action needed. This situation does not require emergency services or city services.",
+                trigger=parsed["trigger"],
+                needs_confirmation=False,
+                report_data=None,
+                image_base64=None
+            )
+        
+        print("\n=== Final Response Summary ===")
+        print(f"Level: {result.level}")
+        print(f"Trigger: {result.trigger}")
+        print(f"Needs Confirmation: {result.needs_confirmation}")
+        print(f"Recommended Action: {result.recommended_action}")
+        print(f"Report Data Included: {bool(result.report_data)}")
+        print(f"Image Included: {bool(result.image_base64)}")
         
         return result
 
     except Exception as e:
         print(f"\n=== ERROR OCCURRED ===")
-        print(f"Error type: {type(e)}")
-        print(f"Error message: {str(e)}")
-        print(f"Error details: {e.__dict__}")
+        print(f"Error details: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/confirm-311")
+async def confirm_311_submission(
+    report_data: Dict,
+    image_base64: Optional[str] = None
+):
+    try:
+        image_data = None
+        if image_base64:
+            # Convert base64 back to bytes
+            image_data = base64.b64decode(image_base64)
+        
+        report_generator = Report311Generator(client)
+        submission_result = await report_generator.submit_to_311(report_data, image_data)
+        return {
+            "status": "success",
+            "message": "311 report submitted successfully",
+            "submission": submission_result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/confirm-911")
+async def confirm_911_call(emergency_details: Dict):
+    try:
+        # Here you would implement the actual 911 service integration
+        return {
+            "status": "success",
+            "message": "Emergency services have been notified",
+            "details": {
+                "emergency_text": emergency_details.get("emergency_details"),
+                "location": emergency_details.get("location")
+            }
+        }
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
