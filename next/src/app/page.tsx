@@ -113,14 +113,16 @@ export default function Home() {
         body: JSON.stringify({
           text,
           location,
-          // images: base64Images,
+          image: base64Images[0],
         }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to get analysis');
       }
-      return await response.json();
+      const data = await response.json();
+      console.log(data);
+      return data;
     } catch (error) {
       console.error('Analysis error:', error);
       // Fallback to a safe default if the API call fails
