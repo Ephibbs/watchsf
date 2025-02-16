@@ -17,12 +17,14 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [severity, setSeverity] = useState<'emergency' | 'non-emergency' | 'none' | null>(null);
+  const [severity, setSeverity] = useState<'EMERGENCY' | 'NON_EMERGENCY' | 'NO_CONCERN' | null>(null);
   const [address, setAddress] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const [showForm, setShowForm] = useState(true);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   const getLocation = (): Promise<{ lat: number; lon: number; address?: string }> => {
     return new Promise((resolve, reject) => {
@@ -92,44 +94,54 @@ export default function Home() {
     images: string[]
   ): Promise<EvaluationResponse> => {
     try {
-      // Convert image URLs to base64
-      const imagePromises = images.map(async (imageUrl) => {
-        const response = await fetch(imageUrl);
+      // Convert first image URL to base64 if it exists
+      let imageData = null;
+      if (images.length > 0) {
+        const response = await fetch(images[0]);
         const blob = await response.blob();
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
+        const reader = new FileReader();
+        imageData = await new Promise<string>((resolve) => {
+          reader.onloadend = () => {
+            // Remove data:image/jpeg;base64, prefix as backend expects raw base64
+            const base64String = reader.result as string;
+            const base64Data = base64String.split(',')[1];
+            resolve(base64Data);
+          };
           reader.readAsDataURL(blob);
         });
-      });
+      }
 
-      const base64Images = await Promise.all(imagePromises);
+      // Create FormData object
+      const formData = new FormData();
+      formData.append('text', text);
+      formData.append('location', `${location.address || `${location.lat},${location.lon}`}`);
+      
+      if (imageData) {
+        // Convert base64 back to blob for FormData
+        const byteCharacters = atob(imageData);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+        formData.append('image', blob, 'image.jpg');
+      }
 
       const response = await fetch('http://localhost:8000/evaluate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          location,
-          image: base64Images[0],
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
         throw new Error('Failed to get analysis');
       }
       const data = await response.json();
-      console.log(data);
+      console.log('Analysis response:', data);
       return data;
     } catch (error) {
       console.error('Analysis error:', error);
-      // Fallback to a safe default if the API call fails
-      return {
-        severity: 'none',
-        analysis: 'Unable to analyze the issue. Please try again later.',
-      };
+      throw error;
     }
   };
 
@@ -159,8 +171,14 @@ export default function Home() {
     try {
       const locationData = await getLocation();
       const result = await getAnalysis(issueText, locationData, selectedImages);
-      setSeverity(result.severity);
-      setAnalysis(result.analysis);
+      setSeverity(result.level);
+      setAnalysis(result.reasoning);
+      
+      // Only hide form after we have the result
+      setShowForm(false);
+      setTimeout(() => {
+        setShowAnalysis(true);
+      }, 300);
     } catch (error) {
       console.error(error);
       alert("An error occurred while analyzing the issue.");
@@ -178,18 +196,22 @@ export default function Home() {
   };
 
   const handleClose = () => {
-    setFeedbackMessage(null);
-    setAnalysis(null);
-    setSeverity(null);
-    setAddress(null);
-    selectedImages.forEach(url => URL.revokeObjectURL(url));
-    setSelectedImages([]);
-    setIssueText('');
+    setShowAnalysis(false);
+    setTimeout(() => {
+      setFeedbackMessage(null);
+      setAnalysis(null);
+      setSeverity(null);
+      setAddress(null);
+      selectedImages.forEach(url => URL.revokeObjectURL(url));
+      setSelectedImages([]);
+      setIssueText('');
+      setShowForm(true);
+    }, 300);
   };
 
   const renderActionButtons = () => {
     switch (severity) {
-      case 'emergency':
+      case 'EMERGENCY':
         return (
           <div className="flex justify-end">
             <button 
@@ -200,7 +222,7 @@ export default function Home() {
             </button>
           </div>
         );
-      case 'non-emergency':
+      case 'NON_EMERGENCY':
         return (
           <div className="flex justify-start">
             <button 
@@ -211,7 +233,7 @@ export default function Home() {
             </button>
           </div>
         );
-      case 'none':
+      case 'NO_CONCERN':
         return (
           <div className="flex justify-center">
             <button 
@@ -346,12 +368,16 @@ export default function Home() {
             </nav>
           </div>
         </header>
-        <main className="min-h-screen flex flex-col items-center justify-center gap-6 max-w-4xl mx-auto p-4 sm:p-8">
-          <h1 className="text-3xl font-bold bg-gray-900 bg-clip-text text-transparent text-center drop-shadow-[0_1px_1px_rgba(255,255,255,1)]">
+        <main className="min-h-screen flex flex-col items-center justify-center gap-6 max-w-4xl mx-auto p-4 sm:p-8 relative">
+          <h1 className={`text-3xl font-bold bg-gray-900 bg-clip-text text-transparent text-center drop-shadow-[0_1px_1px_rgba(255,255,255,1)] transition-all duration-300 ease-in-out absolute top-1/4 left-0 right-0 ${
+            showForm ? 'opacity-100 translate-y-0 visible' : 'opacity-0 -translate-y-4 invisible'
+          }`}>
             What are you reporting?
           </h1>
           
-          <div className="capture-section w-full max-w-2xl">
+          <div className={`capture-section w-full max-w-2xl transition-all duration-300 ease-in-out absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${
+            showForm ? 'opacity-100 translate-y-0 visible z-10' : 'opacity-0 translate-y-4 invisible z-0'
+          }`}>
             <div className="flex flex-col gap-6">
               <div className="bg-white relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-200">
                 <textarea
@@ -475,31 +501,46 @@ export default function Home() {
           </div>
 
           {analysis && (
-            <div className="capture-section w-full max-w-2xl">
-              <h2 className="text-2xl font-bold mb-6">Analysis Result</h2>
-              {address && (
-                <div className="analysis-card">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium">Location:</span> {address}
-                  </p>
-                </div>
-              )}
-              <p className="mb-6 text-lg">{analysis}</p>
-              {feedbackMessage ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="feedback-message">
-                    <p>{feedbackMessage}</p>
-                  </div>
+            <div className={`capture-section w-full max-w-2xl transition-all duration-300 ease-in-out absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${
+              showAnalysis ? 'opacity-100 translate-y-0 visible z-20' : 'opacity-0 translate-y-4 invisible z-0'
+            }`}>
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 p-6 shadow-lg">
+                <div className="flex items-center justify-between mb-6">
                   <button 
-                    className="secondary-button"
                     onClick={handleClose}
+                    className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-2"
                   >
-                    Close
+                    <svg 
+                      className="w-5 h-5" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    Back
                   </button>
+                  <h2 className="text-2xl font-bold">Analysis Result</h2>
                 </div>
-              ) : (
-                renderActionButtons()
-              )}
+                {address && (
+                  <div className="analysis-card">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <span className="font-medium">Location:</span> {address}
+                    </p>
+                  </div>
+                )}
+                <p className="mb-6 text-lg">{analysis}</p>
+                {feedbackMessage ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="feedback-message">
+                      <p>{feedbackMessage}</p>
+                    </div>
+                  </div>
+                ) : (
+                  renderActionButtons()
+                )}
+              </div>
             </div>
           )}
         </main>
