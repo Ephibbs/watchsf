@@ -12,28 +12,36 @@ def receive_report():
     for field, value in request.form.items():
         print(f"  {field}: {value}")
     
-    # Check for and save file
+    # Check for and save files
+    files_received = 0
     if 'media' in request.files:
-        file = request.files['media']
+        files = request.files.getlist('media')
         print(f"\nFile Information:")
-        print(f"  Filename: {file.filename}")
         
-        # Read and get file size
-        file_data = file.read()
-        file_size = len(file_data)
-        print(f"  File size: {file_size} bytes")
-        
-        # Save the file to see if it's properly received
-        save_path = "received_files"
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+        for file in files:
+            print(f"\nFile {files_received + 1}:")
+            print(f"  Filename: {file.filename}")
             
-        file_path = os.path.join(save_path, file.filename)
-        with open(file_path, 'wb') as f:
-            f.write(file_data)
-        print(f"  Saved to: {file_path}")
+            # Read and get file size
+            file_data = file.read()
+            file_size = len(file_data)
+            print(f"  File size: {file_size} bytes")
+            
+            # Save the file
+            save_path = "received_files"
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+                
+            file_path = os.path.join(save_path, file.filename)
+            with open(file_path, 'wb') as f:
+                f.write(file_data)
+            print(f"  Saved to: {file_path}")
+            files_received += 1
+    
+    if files_received == 0:
+        print("\nNo files received")
     else:
-        print("\nNo file received")
+        print(f"\nTotal files received: {files_received}")
     
     print("\n=== End of Report ===\n")
     
@@ -42,7 +50,7 @@ def receive_report():
         "message": "Report received",
         "data": {
             "form_fields": dict(request.form),
-            "file_received": 'media' in request.files
+            "files_received": files_received
         }
     })
 

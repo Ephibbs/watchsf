@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { transcribeAudio } from './actions';
+import Stepper from '../components/Stepper';
 
 interface EvaluationResponse {
   level: 'EMERGENCY' | 'NON_EMERGENCY' | 'NO_CONCERN';
@@ -27,6 +28,33 @@ export default function Home() {
   const [showForm, setShowForm] = useState(true);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<EvaluationResponse | null>(null);
+  const [steps, setSteps] = useState<Array<{
+    title: string;
+    description: string;
+    status: 'waiting' | 'processing' | 'completed' | 'error';
+  }>>([
+    {
+      title: "Action Requested",
+      description: "Processing your input and location data",
+      status: 'waiting'
+    },
+    {
+      title: "Evaluation",
+      description: "Analyzing the situation severity",
+      status: 'waiting'
+    },
+    {
+      title: "Report Generation",
+      description: "Preparing appropriate response",
+      status: 'waiting'
+    },
+    {
+      title: "Approval Required",
+      description: "Waiting for confirmation",
+      status: 'waiting'
+    }
+  ]);
+  const [showSteps, setShowSteps] = useState(false);
 
   const getLocation = (): Promise<{ lat: number; lon: number; address?: string }> => {
     return new Promise((resolve, reject) => {
@@ -171,13 +199,42 @@ export default function Home() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    setShowSteps(true);
+    
     try {
+      // Step 1: Action Requested
+      setSteps(prev => prev.map((step, i) => 
+        i === 0 ? {...step, status: 'processing'} : step
+      ));
       const locationData = await getLocation();
+      setSteps(prev => prev.map((step, i) => 
+        i === 0 ? {...step, status: 'completed'} : step
+      ));
+
+      // Step 2: Evaluation
+      setSteps(prev => prev.map((step, i) => 
+        i === 1 ? {...step, status: 'processing'} : step
+      ));
       const result = await getAnalysis(issueText, locationData, selectedImages);
+      setSteps(prev => prev.map((step, i) => 
+        i === 1 ? {...step, status: 'completed'} : step
+      ));
+
+      // Step 3: Report Generation
+      setSteps(prev => prev.map((step, i) => 
+        i === 2 ? {...step, status: 'processing'} : step
+      ));
       setSeverity(result.level);
       setAnalysis(result.reasoning);
+      setSteps(prev => prev.map((step, i) => 
+        i === 2 ? {...step, status: 'completed'} : step
+      ));
+
+      // Step 4: Approval
+      setSteps(prev => prev.map((step, i) => 
+        i === 3 ? {...step, status: 'processing'} : step
+      ));
       
-      // Only hide form after we have the result
       setShowForm(false);
       setTimeout(() => {
         setShowAnalysis(true);
@@ -185,6 +242,7 @@ export default function Home() {
     } catch (error) {
       console.error(error);
       alert("An error occurred while analyzing the issue.");
+      setSteps(prev => prev.map(step => ({...step, status: 'error'})));
     } finally {
       setIsLoading(false);
     }
@@ -246,6 +304,7 @@ export default function Home() {
 
   const handleClose = () => {
     setShowAnalysis(false);
+    setShowSteps(false);
     setTimeout(() => {
       setFeedbackMessage(null);
       setAnalysis(null);
@@ -255,6 +314,7 @@ export default function Home() {
       setSelectedImages([]);
       setIssueText('');
       setShowForm(true);
+      setSteps(steps.map(step => ({...step, status: 'waiting'})));
     }, 300);
   };
 
@@ -417,16 +477,17 @@ export default function Home() {
             </nav>
           </div>
         </header>
-        <main className="min-h-screen flex flex-col items-center justify-center gap-6 max-w-4xl mx-auto p-4 sm:p-8 relative">
-          <h1 className={`text-3xl font-bold bg-gray-900 bg-clip-text text-transparent text-center drop-shadow-[0_1px_1px_rgba(255,255,255,1)] transition-all duration-300 ease-in-out absolute top-1/4 left-0 right-0 ${
-            showForm ? 'opacity-100 translate-y-0 visible' : 'opacity-0 -translate-y-4 invisible'
-          }`}>
-            What are you reporting?
-          </h1>
+        <main className="flex flex-col items-center justify-start min-h-[calc(100vh-200px)] max-w-4xl mx-auto p-4 sm:p-8 pt-40">
+  {/* Title */}
+  <h1 className={`text-3xl font-bold bg-gray-900 bg-clip-text text-transparent text-center drop-shadow-[0_1px_1px_rgba(255,255,255,1)] transition-all duration-300 ease-in-out mb-8 ${
+    showForm ? 'opacity-100 translate-y-0 visible' : 'opacity-0 -translate-y-4 invisible'
+  }`}>
+    What are you reporting?
+  </h1>
           
-          <div className={`capture-section w-full max-w-2xl transition-all duration-300 ease-in-out absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${
-            showForm ? 'opacity-100 translate-y-0 visible z-10' : 'opacity-0 translate-y-4 invisible z-0'
-          }`}>
+  <div className={`w-full max-w-2xl transition-all duration-300 ease-in-out ${
+    showForm ? 'opacity-100 translate-y-0 visible' : 'opacity-0 translate-y-4 invisible'
+  }`}>
             <div className="flex flex-col gap-6">
               <div className="bg-white relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-200">
                 <textarea
@@ -550,8 +611,8 @@ export default function Home() {
           </div>
 
           {analysis && (
-            <div className={`capture-section w-full max-w-2xl transition-all duration-300 ease-in-out absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${
-              showAnalysis ? 'opacity-100 translate-y-0 visible z-20' : 'opacity-0 translate-y-4 invisible z-0'
+            <div className={`w-full max-w-2xl transition-all duration-300 ease-in-out ${
+              showAnalysis ? 'opacity-100 translate-y-0 visible' : 'opacity-0 translate-y-4 invisible'
             }`}>
               <div className="bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200 p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-6">
@@ -593,6 +654,12 @@ export default function Home() {
             </div>
           )}
         </main>
+
+        <div className="fixed bottom-0 left-0 right-0 p-4 z-50">
+          <div className="max-w-4xl mx-auto">
+            <Stepper steps={steps} visible={showSteps} />
+          </div>
+        </div>
       </div>
     </div>
   );

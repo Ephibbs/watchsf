@@ -9,6 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@stytch/nextjs": "^21.4.0",
+    "@stytch/react": "^19.4.0",
+    "@stytch/vanilla-js": "^5.17.0",
+    "framer-motion": "^12.4.3",
     "next": "15.1.7",
     "openai": "^4.85.1",
     "react": "^19.0.0",
