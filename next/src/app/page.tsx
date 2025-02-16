@@ -1,12 +1,14 @@
 'use client';
 
-import Image from "next/image";
 import { useState, useRef } from "react";
 import { transcribeAudio } from './actions';
 
 interface EvaluationResponse {
-  severity: 'emergency' | 'non-emergency' | 'none';
-  analysis: string;
+  level: 'EMERGENCY' | 'NON_EMERGENCY' | 'NO_CONCERN';
+  confidence: number;
+  reasoning: string;
+  recommended_action: string;
+  trigger: '911' | '311' | 'NONE';
 }
 
 export default function Home() {
@@ -111,14 +113,13 @@ export default function Home() {
         body: JSON.stringify({
           text,
           location,
-          images: base64Images,
+          // images: base64Images,
         }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to get analysis');
       }
-
       return await response.json();
     } catch (error) {
       console.error('Analysis error:', error);
@@ -330,8 +331,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen font-[family-name:var(--font-geist-sans)] bg-contain bg-center bg-no-repeat" 
-         style={{ backgroundImage: 'url("/originalevan_simple_digital_icon_of_the_golden_gate_bridge_--_0f9cbc8b-0951-450d-ae37-143e8f76c577_0.png")', backgroundSize: '95vh' }}>
-      <div className="min-h-screen bg-white/20">
+         style={{ backgroundImage: 'url("/originalevan_simple_digital_icon_of_the_golden_gate_bridge_--_0f9cbc8b-0951-450d-ae37-143e8f76c577_0.svg")', backgroundSize: '95vh' }}>
+      <div className="min-h-screen bg-white/30">
         <header className="w-full py-4 px-8 fixed top-0 z-50">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-red-300 to-red-400 bg-clip-text text-transparent">
@@ -344,16 +345,16 @@ export default function Home() {
           </div>
         </header>
         <main className="min-h-screen flex flex-col items-center justify-center gap-6 max-w-4xl mx-auto p-4 sm:p-8">
-          <h1 className="text-3xl font-bold bg-gray-900 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gray-900 bg-clip-text text-transparent text-center drop-shadow-[0_1px_1px_rgba(255,255,255,1)]">
             What are you reporting?
           </h1>
           
           <div className="capture-section w-full max-w-2xl">
             <div className="flex flex-col gap-6">
-              <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-200">
+              <div className="bg-white relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all duration-200">
                 <textarea
-                  className="w-full p-4 bg-transparent resize-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600"
-                  placeholder="Describe the issue you're reporting..."
+                  className="w-full p-4 bg-transparent resize-none outline-none text-gray-900 placeholder-gray-400 dark:placeholder-gray-600"
+                  placeholder="Describe the issue..."
                   value={issueText}
                   onChange={(e) => setIssueText(e.target.value)}
                   rows={4}
@@ -402,6 +403,30 @@ export default function Home() {
                       />
                     </svg>
                   </button>
+
+                  <button
+                    className="p-2.5 rounded-full transition-all duration-200 flex items-center justify-center bg-primary hover:bg-primary-hover text-white"
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                    title="Analyze Issue"
+                  >
+                    {isLoading ? (
+                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : (
+                      <svg 
+                        className="w-5 h-5" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
                 <input
                   type="file"
@@ -444,24 +469,6 @@ export default function Home() {
                   ))}
                 </div>
               )}
-
-              <button
-                className="primary-button"
-                onClick={handleSubmit}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Analyzing...
-                  </>
-                ) : (
-                  "Analyze Issue"
-                )}
-              </button>
             </div>
           </div>
 
