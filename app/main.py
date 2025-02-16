@@ -509,7 +509,7 @@ async def evaluate_emergency(
                 "location": location
             }
             
-            needs_confirmation = False  # Change this to True if you want confirmation flow
+            needs_confirmation = True  # Change this to True if you want confirmation flow
             
             if needs_confirmation:
                 # Confirmation flow
