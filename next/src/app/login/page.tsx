@@ -3,7 +3,7 @@
 import { StytchLogin } from '@stytch/nextjs'
 import { Products } from '@stytch/vanilla-js'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://localhost:3001'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://localhost:3000'
 
 export default function LoginPage() {
   const config = {

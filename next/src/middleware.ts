@@ -17,6 +17,7 @@ export async function middleware(req: NextRequest) {
     '/authenticate',
     '/favicon.ico',
     '/static',
+    '/originalevan_simple_digital_icon_of_the_golden_gate_bridge_--_0f9cbc8b-0951-450d-ae37-143e8f76c577_0.svg'
   ]
 
   // Check if the current path is public
