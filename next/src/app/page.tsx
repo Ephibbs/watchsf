@@ -25,6 +25,7 @@ export default function Home() {
   const audioChunksRef = useRef<Blob[]>([]);
   const [showForm, setShowForm] = useState(true);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<EvaluationResponse | null>(null);
 
   const getLocation = (): Promise<{ lat: number; lon: number; address?: string }> => {
     return new Promise((resolve, reject) => {
@@ -137,6 +138,7 @@ export default function Home() {
         throw new Error('Failed to get analysis');
       }
       const data = await response.json();
+      setAnalysisResult(data);
       console.log('Analysis response:', data);
       return data;
     } catch (error) {
@@ -187,11 +189,63 @@ export default function Home() {
     }
   };
 
-  const handleAction = (action: 'emergency' | 'non-emergency') => {
+  const sendEmergencyAlert = () => {
+    console.log('Sending emergency alert');
+  };
+
+  const sendNonEmergencyAlert = async () => {
+    try {
+      // Convert first image to base64 if it exists
+      let imageBase64 = null;
+      if (selectedImages.length > 0) {
+        const response = await fetch(selectedImages[0]);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        imageBase64 = await new Promise((resolve) => {
+          reader.onloadend = () => {
+            const base64String = reader.result as string;
+            // Remove data URL prefix
+            resolve(base64String.split(',')[1]);
+          };
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      const response = await fetch('/confirm-311', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          report_data: {
+            text: issueText,
+            severity,
+            analysis,
+            location: address
+          },
+          image_base64: imageBase64
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit 311 report');
+      }
+
+      const result = await response.json();
+      console.log('311 submission result:', result);
+      setFeedbackMessage('Report sent to 311 services.');
+    } catch (error) {
+      console.error('Error submitting 311 report:', error);
+      alert('Failed to submit 311 report. Please try again.');
+    }
+  }
+
+  const handleAction = async (action: 'emergency' | 'non-emergency') => {
     if (action === 'emergency') {
       setFeedbackMessage('Emergency services have been notified.');
+      await sendEmergencyAlert();
     } else {
-      setFeedbackMessage('Report sent to 311 services.');
+      await sendNonEmergencyAlert();
     }
   };
 
