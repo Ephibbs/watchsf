@@ -1,0 +1,1 @@
+{"_wandb":{"runtime":56},"input_text":"There is a leaning tree at Market Street","_runtime":46.120219,"error_type":"AttributeError","_step":1,"request_id":"20250216_102849","error":"'ChatCompletion' object has no attribute 'response_ms'","has_image":false,"_timestamp":1.739730537564057e+09,"location":"123 Market Street, San Francisco"}

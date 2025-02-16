@@ -1,0 +1,16 @@
+{"time":"2025-02-16T10:28:02.473914-08:00","level":"INFO","msg":"stream: starting","core version":"0.19.6","symlink path":"/Users/michaelnikolian/Documents/projects/watchsf/watchsf/app/wandb/run-20250216_102802-ss0kd7is/logs/debug-core.log"}
+{"time":"2025-02-16T10:28:02.581719-08:00","level":"INFO","msg":"created new stream","id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:02.581788-08:00","level":"INFO","msg":"stream: started","id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:02.581806-08:00","level":"INFO","msg":"handler: started","stream_id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:02.58186-08:00","level":"INFO","msg":"writer: Do: started","stream_id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:02.581878-08:00","level":"INFO","msg":"sender: started","stream_id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:02.80142-08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-02-16T10:28:08.176563-08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-02-16T10:28:08.177738-08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-02-16T10:28:08.614293-08:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-02-16T10:28:08.731509-08:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2025-02-16T10:28:09.736147-08:00","level":"INFO","msg":"stream: closing","id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:09.73618-08:00","level":"INFO","msg":"handler: closed","stream_id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:09.736192-08:00","level":"INFO","msg":"sender: closed","stream_id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:09.736186-08:00","level":"INFO","msg":"writer: Close: closed","stream_id":"ss0kd7is"}
+{"time":"2025-02-16T10:28:09.73629-08:00","level":"INFO","msg":"stream: closed","id":"ss0kd7is"}

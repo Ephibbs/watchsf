@@ -1,0 +1,103 @@
+[32mINFO[0m:     Started server process [[36m9710[0m]
+[32mINFO[0m:     Waiting for application startup.
+[32mINFO[0m:     Application startup complete.
+
+=== Starting Emergency Evaluation ===
+Input Text: There is a fire in the building at Market Street
+Location: 123 Market Street, San Francisco
+
+=== Schema Configuration ===
+Schema: {
+  "name": "emergency_classification",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "level": {
+        "type": "string",
+        "description": "EMERGENCY, NON_EMERGENCY, or NO_CONCERN",
+        "enum": [
+          "EMERGENCY",
+          "NON_EMERGENCY",
+          "NO_CONCERN"
+        ]
+      },
+      "confidence": {
+        "type": "number",
+        "description": "Confidence level from 0.0 to 1.0"
+      },
+      "reasoning": {
+        "type": "string",
+        "description": "Explanation of why the classification was chosen"
+      },
+      "recommended_action": {
+        "type": "string",
+        "description": "Advice for user or system on next steps"
+      },
+      "trigger": {
+        "type": "string",
+        "description": "Which service to trigger: '911', '311', or 'NONE'"
+      }
+    },
+    "required": [
+      "level",
+      "confidence",
+      "reasoning",
+      "recommended_action",
+      "trigger"
+    ],
+    "additionalProperties": false
+  }
+}
+
+=== Prompt Sent to Model ===
+
+        Evaluate the following situation and determine if it's an emergency:
+        Text: There is a fire in the building at Market Street
+        Location: 123 Market Street, San Francisco
+        Image: No image provided
+
+        Classification choices:
+          1) EMERGENCY => call 911
+          2) NON_EMERGENCY => call 311
+          3) NO_CONCERN => do nothing
+
+        Return your reasoning, recommended action, confidence, and the correct trigger
+        ('911', '311', or 'NONE'). Make sure you only respond with valid JSON.
+
+
+=== Making OpenAI API Call ===
+
+=== Raw OpenAI Response ===
+Response object: ChatCompletion(id='chatcmpl-B1ddvb30n30dxIqUWEAsklaVjt2A1', choices=[Choice(finish_reason='stop', index=0, message=ChatCompletionMessage(content='{\n  "level": "EMERGENCY",\n  "confidence": 1.0,\n  "reasoning": "The report of a building fire at a known location constitutes an immediate life and property threat, which requires urgent action from emergency services.",\n  "recommended_action": "Call 911 immediately and follow safety procedures, such as evacuating the area if safe to do so.",\n  "trigger": "911"\n}', role='assistant', function_call=None, tool_calls=None, refusal=None))], created=1739730415, model='o3-mini-2025-01-31', object='chat.completion', system_fingerprint='fp_ef58bd3122', usage=CompletionUsage(completion_tokens=224, prompt_tokens=285, total_tokens=509, prompt_tokens_details={'cached_tokens': 0, 'audio_tokens': 0}, completion_tokens_details={'reasoning_tokens': 128, 'audio_tokens': 0, 'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}), service_tier='default')
+
+=== Model Response Content ===
+Content: {
+  "level": "EMERGENCY",
+  "confidence": 1.0,
+  "reasoning": "The report of a building fire at a known location constitutes an immediate life and property threat, which requires urgent action from emergency services.",
+  "recommended_action": "Call 911 immediately and follow safety procedures, such as evacuating the area if safe to do so.",
+  "trigger": "911"
+}
+
+=== Parsing JSON Response ===
+Parsed JSON: {
+  "level": "EMERGENCY",
+  "confidence": 1.0,
+  "reasoning": "The report of a building fire at a known location constitutes an immediate life and property threat, which requires urgent action from emergency services.",
+  "recommended_action": "Call 911 immediately and follow safety procedures, such as evacuating the area if safe to do so.",
+  "trigger": "911"
+}
+
+=== Preparing 911 Response ===
+
+=== Final Response Summary ===
+Level: EmergencyLevel.EMERGENCY
+Trigger: 911
+Needs Confirmation: True
+Recommended Action: This appears to be an emergency. Would you like us to contact 911?
+Report Data Included: True
+Image Included: False
+[32mINFO[0m:     127.0.0.1:59909 - "[1mPOST /evaluate HTTP/1.1[0m" [91m500 Internal Server Error[0m
+[32mINFO[0m:     Shutting down
+[32mINFO[0m:     Waiting for application shutdown.

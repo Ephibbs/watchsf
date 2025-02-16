@@ -1,0 +1,148 @@
+[32mINFO[0m:     Started server process [[36m10897[0m]
+[32mINFO[0m:     Waiting for application startup.
+[32mINFO[0m:     Application startup complete.
+
+=== Starting Emergency Evaluation ===
+Input Text: There is a leaning tree at Market Street
+Location: 123 Market Street, San Francisco
+
+=== Schema Configuration ===
+Schema: {
+  "name": "emergency_classification",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "level": {
+        "type": "string",
+        "description": "EMERGENCY, NON_EMERGENCY, or NO_CONCERN",
+        "enum": [
+          "EMERGENCY",
+          "NON_EMERGENCY",
+          "NO_CONCERN"
+        ]
+      },
+      "confidence": {
+        "type": "number",
+        "description": "Confidence level from 0.0 to 1.0"
+      },
+      "reasoning": {
+        "type": "string",
+        "description": "Explanation of why the classification was chosen"
+      },
+      "recommended_action": {
+        "type": "string",
+        "description": "Advice for user or system on next steps"
+      },
+      "trigger": {
+        "type": "string",
+        "description": "Which service to trigger: '911', '311', or 'NONE'"
+      }
+    },
+    "required": [
+      "level",
+      "confidence",
+      "reasoning",
+      "recommended_action",
+      "trigger"
+    ],
+    "additionalProperties": false
+  }
+}
+
+=== Prompt Sent to Model ===
+
+        Evaluate the following situation and determine if it's an emergency:
+        Text: There is a leaning tree at Market Street
+        Location: 123 Market Street, San Francisco
+        Image: No image provided
+
+        Classification choices:
+          1) EMERGENCY => call 911
+          2) NON_EMERGENCY => call 311
+          3) NO_CONCERN => do nothing
+
+        Return your reasoning, recommended action, confidence, and the correct trigger
+        ('911', '311', or 'NONE'). Make sure you only respond with valid JSON.
+
+
+=== Making OpenAI API Call ===
+
+=== Raw OpenAI Response ===
+Response object: ChatCompletion(id='chatcmpl-B1dfl3GOu1sEzpClqoxBJah2qS728', choices=[Choice(finish_reason='stop', index=0, message=ChatCompletionMessage(content='{\n  "level": "NON_EMERGENCY",\n  "confidence": 0.95,\n  "reasoning": "A leaning tree is a potential safety concern and may need evaluation to prevent future accidents, but it does not appear to pose an immediate danger requiring urgent emergency services. It is more appropriate for non-emergency city services to inspect and address the Issue.",\n  "recommended_action": "Contact local non-emergency services by calling 311.",\n  "trigger": "311"\n}', role='assistant', function_call=None, tool_calls=None, refusal=None))], created=1739730529, model='o3-mini-2025-01-31', object='chat.completion', system_fingerprint='fp_ef58bd3122', usage=CompletionUsage(completion_tokens=430, prompt_tokens=283, total_tokens=713, prompt_tokens_details={'cached_tokens': 0, 'audio_tokens': 0}, completion_tokens_details={'reasoning_tokens': 320, 'audio_tokens': 0, 'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}), service_tier='default')
+
+=== Model Response Content ===
+Content: {
+  "level": "NON_EMERGENCY",
+  "confidence": 0.95,
+  "reasoning": "A leaning tree is a potential safety concern and may need evaluation to prevent future accidents, but it does not appear to pose an immediate danger requiring urgent emergency services. It is more appropriate for non-emergency city services to inspect and address the Issue.",
+  "recommended_action": "Contact local non-emergency services by calling 311.",
+  "trigger": "311"
+}
+
+=== Parsing JSON Response ===
+Parsed JSON: {
+  "level": "NON_EMERGENCY",
+  "confidence": 0.95,
+  "reasoning": "A leaning tree is a potential safety concern and may need evaluation to prevent future accidents, but it does not appear to pose an immediate danger requiring urgent emergency services. It is more appropriate for non-emergency city services to inspect and address the Issue.",
+  "recommended_action": "Contact local non-emergency services by calling 311.",
+  "trigger": "311"
+}
+
+=== Generating 311 Report ===
+
+=== Generating 311 Report ===
+Prompt for report generation:
+            Create a detailed 311 report for San Francisco city services for the following situation:
+            Situation: There is a leaning tree at Market Street
+            Location: 123 Market Street, San Francisco
+            Service Code: PW:BSM:Damage Property
+
+            Create a structured report with:
+            1. Detailed description of the issue
+            2. Exact location details
+            3. Severity level
+            4. Any relevant additional details
+            5. Recommended priority
+
+            Return as JSON with these fields:
+            - description
+            - address_string
+            - lat (if available)
+            - long (if available)
+            - service_code
+            - service_name
+            - requested_datetime
+            - status
+            - media_url (if image available)
+            - image_description (if available)
+
+AI Response: {
+  "description": "A leaning tree has been observed at Market Street near 123 Market Street, San Francisco. The tree appears to be significantly tilted, posing a potential risk to nearby property and pedestrians. The issue is assessed to be of moderate severity, and it is recommended that the city prioritize an inspection of the tree to determine if it poses an imminent safety hazard or if remedial actions are necessary.",
+  "address_string": "123 Market Street, San Francisco",
+  "lat": 37.793,
+  "long": -122.396,
+  "service_code": "PW:BSM:Damage Property",
+  "service_name": "Damage Property",
+  "requested_datetime": "2023-10-12T12:00:00Z",
+  "status": "Open",
+  "media_url": null,
+  "image_description": null
+}
+
+=== Preparing 311 Response ===
+✓ Report data generated
+✓ Image included: False
+✓ Confirmation needed: True
+✓ Recommended action: Would you like to submit a 311 report for this issue?
+
+=== Final Response Summary ===
+Level: EmergencyLevel.NON_EMERGENCY
+Trigger: 311
+Needs Confirmation: True
+Recommended Action: Would you like to submit a 311 report for this issue?
+Report Data Included: True
+Image Included: False
+[32mINFO[0m:     127.0.0.1:59974 - "[1mPOST /evaluate HTTP/1.1[0m" [91m500 Internal Server Error[0m
+[32mINFO[0m:     Shutting down
+[32mINFO[0m:     Waiting for application shutdown.

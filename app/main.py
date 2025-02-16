@@ -4,6 +4,8 @@ from enum import Enum
 from typing import Optional, Dict
 import json
 import requests
+import wandb
+from datetime import datetime
 
 import openai
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
@@ -19,6 +21,15 @@ load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
+
+# Initialize W&B
+wandb.init(
+    project="emergency-response-system",
+    config={
+        "model": "o3-mini-2025-01-31",
+        "api_version": "1.0"
+    }
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -325,6 +336,15 @@ async def evaluate_emergency(
     This endpoint classifies situations using the 'o3-mini-2025-01-31' model with structured output.
     """
     try:
+        # Start tracking this request
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        wandb.log({
+            "request_id": run_id,
+            "input_text": text,
+            "location": location,
+            "has_image": image is not None
+        })
+
         print("\n=== Starting Emergency Evaluation ===")
         print(f"Input Text: {text}")
         print(f"Location: {location}")
@@ -564,11 +584,38 @@ async def evaluate_emergency(
         print(f"Report Data Included: {bool(result.report_data)}")
         print(f"Image Included: {bool(result.image_base64)}")
         
+        # Log model response
+        wandb.log({
+            "request_id": run_id,
+            "classification_level": parsed["level"],
+            "confidence": parsed["confidence"],
+            "trigger": parsed["trigger"],
+            "response_time": response.response_ms / 1000.0  # Convert to seconds
+        })
+
+        if image and image_description:
+            wandb.log({
+                "request_id": run_id,
+                "image_description": image_description
+            })
+
+        # Log final result
+        wandb.log({
+            "request_id": run_id,
+            "final_level": result.level,
+            "needs_confirmation": result.needs_confirmation,
+            "has_report_data": result.report_data is not None
+        })
+
         return result
 
     except Exception as e:
-        print(f"\n=== ERROR OCCURRED ===")
-        print(f"Error details: {str(e)}")
+        # Log errors
+        wandb.log({
+            "request_id": run_id if 'run_id' in locals() else None,
+            "error": str(e),
+            "error_type": type(e).__name__
+        })
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/confirm-311")
@@ -612,3 +659,8 @@ async def confirm_911_call(emergency_details: Dict):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Add cleanup on app shutdown
+@app.on_event("shutdown")
+async def shutdown_event():
+    wandb.finish()
