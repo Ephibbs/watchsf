@@ -198,47 +198,107 @@ class Report311Generator:
 class Call911Service:
     def __init__(self):
         self.api_key = os.getenv("VAPI_API_KEY")
-        self.base_url = "https://api.vapi.ai/call"
+        self.base_url = "https://api.vapi.ai"
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
     
-    async def make_emergency_call(self, emergency_details: Dict) -> Dict:
-        """Make an outbound call to report emergency"""
+    async def create_emergency_assistant(self, emergency_details: Dict) -> Dict:
+        """Create an emergency assistant"""
         try:
-            # In production, this would be the actual 911 number
-            dummy_emergency_number = "+6502671201"
+            location = emergency_details.get("location", "unknown location")
+            details = emergency_details.get("emergency_details", "")
+            assistant_payload = {
+                "name": "Emergency Assistant",
+                "model": {
+                    "provider": "openai",
+                    "model": "gpt-4o",
+                    "temperature": 1,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": """You are an emergency reporting assistant. Your job is to:
+                            1. Clearly and calmly report emergency situations to emergency services
+                            2. Stay on the line until emergency services confirm they have all needed information
+                            3. Be concise but thorough in your responses
+                            
+                            Remember to:
+                            - Speak professionally and calmly
+                            - Listen carefully to the operator's questions
+                            - Provide location details when asked
+                            - Confirm information when requested
+                            - Don't end the call until the operator indicates they have everything they need"""
+                        }
+                    ],
+                    "maxTokens": 250,
+                    "temperature": 0.7
+                },
+                "voice": {
+                    "provider": "11labs",
+                    "voiceId": "burt",
+                    "model": "eleven_turbo_v2_5"
+                },
+                "firstMessage": self._generate_emergency_script(emergency_details),
+                "firstMessageMode": "assistant-speaks-first",
+                "maxDurationSeconds": 300,  # 5 minutes max
+                "silenceTimeoutSeconds": 10,
+                "endCallMessage": "Thank you for your time. Emergency services have been notified.",
+                "endCallPhrases": ["goodbye", "thank you for your time", "emergency services have been notified"]
+            }
             
-            payload = {
+            # Create the assistant
+            response = requests.post(
+                f"{self.base_url}/assistant",
+                headers=self.headers,
+                json=assistant_payload
+            )
+            
+            # Parse the response
+            assistant_data = response.json()
+            
+            # Check if we got an ID back
+            if "id" not in assistant_data:
+                raise Exception(f"Failed to create assistant: {response.text}")
+            
+            print(f"Assistant created successfully with ID: {assistant_data['id']}")
+            return await self.make_emergency_call(emergency_details, assistant_data["id"])
+            
+        except Exception as e:
+            print(f"Error creating emergency assistant: {str(e)}")
+            raise
+    
+    async def make_emergency_call(self, emergency_details: Dict, assistant_id: str) -> Dict:
+        """Make an outbound call using the created assistant"""
+        try:
+            dummy_emergency_number = "+16502671201"  # Target number to call
+            
+            call_payload = {
                 "name": "Emergency Call",
                 "type": "outboundPhoneCall",
-                "phoneNumber": {
-                    "number": dummy_emergency_number
-                },
+                "phoneNumberId": "690c63e0-0e3f-4db8-8538-40cf42a76099",
                 "customer": {
-                    "number": dummy_emergency_number
+                    "number": dummy_emergency_number,
+                    "numberE164CheckEnabled": True
                 },
-                "assistant": {
-                    "name": "Emergency Reporter",
-                    "voice": {
-                        "provider": "azure",
-                        "voiceId": "en-US-JennyNeural"
-                    },
-                    "firstMessage": self._generate_emergency_script(emergency_details)
-                }
+                "assistantId": assistant_id  # Use the created assistant - it already has model and voice config
             }
             
             response = requests.post(
-                self.base_url,
+                f"{self.base_url}/call",
                 headers=self.headers,
-                json=payload
+                json=call_payload
             )
             
-            if response.status_code != 200:
+            call_data = response.json()
+            
+            # Check if we got an ID back (successful call initiation)
+            if "id" not in call_data:
                 raise Exception(f"Failed to initiate emergency call: {response.text}")
-                
-            return response.json()
+            
+            print(f"Emergency call initiated successfully with ID: {call_data['id']}")
+            return call_data
+            
         except Exception as e:
             print(f"Error making emergency call: {str(e)}")
             raise
@@ -249,10 +309,10 @@ class Call911Service:
         details = emergency_details.get("emergency_details", "")
         
         return f"""
-        Hello, I am an automated emergency reporting system.
-        I need to report an emergency at {location}.
+        Hello, {location}.
         The situation is as follows: {details}
         Please dispatch emergency services to this location immediately.
+        I will stay on the line to provide any additional information you need.
         """
 
 @app.post("/evaluate")
@@ -466,7 +526,7 @@ async def evaluate_emergency(
             else:
                 # Immediate action flow
                 emergency_service = Call911Service()
-                call_result = await emergency_service.make_emergency_call(emergency_details)
+                call_result = await emergency_service.create_emergency_assistant(emergency_details)
                 
                 result = EmergencyResponse(
                     level=parsed["level"],
@@ -536,7 +596,8 @@ async def confirm_311_submission(
 async def confirm_911_call(emergency_details: Dict):
     try:
         emergency_service = Call911Service()
-        call_result = await emergency_service.make_emergency_call(emergency_details)
+        # Create assistant and make the call
+        call_result = await emergency_service.create_emergency_assistant(emergency_details)
         
         return {
             "status": "success",
