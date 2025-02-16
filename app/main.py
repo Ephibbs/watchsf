@@ -39,7 +39,8 @@ app.add_middleware(
         "http://localhost:3000",
         "https://localhost:3000",  # Add HTTPS version
         "http://localhost:8000",
-        "https://localhost:8000"
+        "https://localhost:8000",
+        "https://localhost:3001"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -630,6 +631,7 @@ async def evaluate_emergency(
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         # Log errors
+        print(f"Error: {e}")
         wandb.log({
             "request_id": run_id if 'run_id' in locals() else None,
             "error": str(e),
