@@ -46,7 +46,8 @@ class EmergencyResponse(BaseModel):
 class Report311Generator:
     def __init__(self, client: OpenAI):
         self.client = client
-        self.base_url = "https://mobile311.sfgov.org/open311/v2"
+        # Use local test server instead of real SF 311
+        self.base_url = "http://localhost:3000"
         
     async def generate_report(self, situation: str, location: str, service_code: str, image_data: Optional[bytes] = None, image_description: Optional[str] = None) -> Dict:
         """Generate a detailed 311 report using AI"""
@@ -144,22 +145,41 @@ class Report311Generator:
             print(f"Error generating 311 report: {str(e)}")
             raise
 
-    async def submit_to_311(self, report: Dict) -> Dict:
-        """Submit the report to SF 311 API"""
+    async def submit_to_311(self, report: Dict, image_data: Optional[bytes] = None) -> Dict:
+        """Submit the report to test server following Open311 standard"""
         try:
-            print("\n=== Submitting to 311 API ===")
-            url = f"{self.base_url}/requests.json"
+            print("\n=== Submitting to Test Server ===")
+            url = f"{self.base_url}/requests"  # Simplified endpoint for testing
             
-            print(f"Submitting report: {json.dumps(report, indent=2)}")
+            # Basic form fields required by Open311
+            form_data = {
+                'service_code': report['service_code'],
+                'description': report['description'],
+                'address_string': report['address_string'],
+            }
             
-            # TODO: Add actual API key and authentication as required by SF 311
-            response = requests.post(url, json=report)
+            # Image attachment using Open311 'media' field
+            files = {}
+            if image_data:
+                print(f"✓ Image data size: {len(image_data)} bytes")
+                files = {
+                    'media': ('report_image.jpg', image_data, 'image/jpeg')
+                }
+                print("✓ Image attached to request")
+            else:
+                print("✗ No image data to attach")
             
-            print(f"311 API Response: {response.text}")
+            print(f"Sending to URL: {url}")
+            print(f"Form data: {json.dumps(form_data, indent=2)}")
+            print(f"Files attached: {bool(files)}")
+            
+            response = requests.post(url, data=form_data, files=files)
+            
+            print(f"Test Server Response: {response.text}")
             return response.json()
 
         except Exception as e:
-            print(f"Error submitting to 311: {str(e)}")
+            print(f"Error submitting to test server: {str(e)}")
             raise
 
 @app.post("/evaluate")
@@ -321,12 +341,12 @@ async def evaluate_emergency(
                 situation=text,
                 location=location or "Unknown",
                 service_code=service_code,
-                image_data=image_data,  # Pass the stored image data
+                image_data=image_data,
                 image_description=image_description
             )
             
-            # Submit to 311
-            submission_result = await report_generator.submit_to_311(report)
+            # Submit to 311 with the image
+            submission_result = await report_generator.submit_to_311(report, image_data)
             print(f"311 Submission Result: {submission_result}")
 
         # Handle 911 cases
