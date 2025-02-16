@@ -2,3 +2,8 @@ app/.env
 app/__pycache__
 next/.env.local
 next/.env.development.local
+# Weights & Biases
+app/wandb/
+
+
+
