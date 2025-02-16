@@ -235,6 +235,11 @@ export default function Home() {
 
   const confirmAlert = async (isEmergency: boolean) => {
     try {
+      // Update the last step to completed status
+      setSteps(prev => prev.map((step, i) => 
+        i === prev.length - 1 ? {...step, status: 'completed'} : step
+      ));
+
       // Convert first image to base64 if it exists
       let imageBase64 = null;
       if (selectedImages.length > 0) {
@@ -244,12 +249,12 @@ export default function Home() {
         imageBase64 = await new Promise((resolve) => {
           reader.onloadend = () => {
             const base64String = reader.result as string;
-            // Remove data URL prefix
             resolve(base64String.split(',')[1]);
           };
           reader.readAsDataURL(blob);
         });
       }
+
       const url = isEmergency ? 'http://localhost:8000/confirm-911' : 'http://localhost:8000/confirm-311';
       const response = await fetch(url, {
         method: 'POST',
@@ -263,7 +268,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit 311 report');
+        throw new Error('Failed to submit report');
       }
 
       const result = await response.json();
@@ -274,8 +279,12 @@ export default function Home() {
         setFeedbackMessage('Report sent to 311 services.');
       }
     } catch (error) {
-      console.error('Error submitting 311 report:', error);
-      alert('Failed to submit 311 report. Please try again.');
+      console.error('Error submitting report:', error);
+      alert('Failed to submit report. Please try again.');
+      // Set the last step to error status if submission fails
+      setSteps(prev => prev.map((step, i) => 
+        i === prev.length - 1 ? {...step, status: 'error'} : step
+      ));
     }
   }
 
