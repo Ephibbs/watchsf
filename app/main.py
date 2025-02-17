@@ -192,38 +192,33 @@ class Call911Service:
         try:
             location = emergency_details.get("location", "unknown location")
             details = emergency_details.get("emergency_details", "")
+            print(f"Details: {details}")
+            print(f"Location: {location}")
             assistant_payload = {
                 "name": "Emergency Assistant",
                 "model": {
                     "provider": "openai",
                     "model": "gpt-4o",
-                    "temperature": 1,
+                    "temperature": 0.3,
                     "messages": [
                         {
                             "role": "system",
-                            "content": """You are an emergency reporting assistant. Your job is to:
-                            1. Clearly and calmly report emergency situations to emergency services
-                            2. Stay on the line until emergency services confirm they have all needed information
-                            3. Be concise but thorough in your responses
-                            
-                            Remember to:
-                            - Speak professionally and calmly
-                            - Listen carefully to the operator's questions
-                            - Provide location details when asked
-                            - Confirm information when requested
-                            - Don't end the call until the operator indicates they have everything they need"""
+                            "content": f"""You are a person that has encountered an emergency and you reporting it to 911.
+                            emergency details: {details}
+                            emergency location: {location}
+                            """
                         }
                     ],
                     "maxTokens": 250,
-                    "temperature": 0.7
+                    "temperature": 0.3
                 },
                 "voice": {
                     "provider": "11labs",
                     "voiceId": "burt",
                     "model": "eleven_turbo_v2_5"
                 },
-                "firstMessage": self._generate_emergency_script(emergency_details),
-                "firstMessageMode": "assistant-speaks-first",
+                # "firstMessage": self._generate_emergency_script(emergency_details),
+                # "firstMessageMode": "assistant-speaks-first",
                 "maxDurationSeconds": 300,  # 5 minutes max
                 "silenceTimeoutSeconds": 10,
                 "endCallMessage": "Thank you for your time. Emergency services have been notified.",
@@ -259,7 +254,7 @@ class Call911Service:
             call_payload = {
                 "name": "Emergency Call",
                 "type": "outboundPhoneCall",
-                "phoneNumberId": "690c63e0-0e3f-4db8-8538-40cf42a76099",
+                "phoneNumberId": "7afb871b-1d78-4e75-9118-fd9415f5e7c6",
                 "customer": {
                     "number": dummy_emergency_number,
                     "numberE164CheckEnabled": True
@@ -290,12 +285,12 @@ class Call911Service:
         """Generate the initial script for the emergency call"""
         location = emergency_details.get("location", "unknown location")
         details = emergency_details.get("emergency_details", "")
+
+        
         
         return f"""
-        Hello, {location}.
-        The situation is as follows: {details}
-        Please dispatch emergency services to this location immediately.
-        I will stay on the line to provide any additional information you need.
+        details: {details}
+        location: {location}
         """
 
 class EmergencyKnowledgeBase:
