@@ -240,48 +240,70 @@ export default function Home() {
         i === prev.length - 1 ? {...step, status: 'completed'} : step
       ));
 
-      // Convert first image to base64 if it exists
-      let imageBase64 = null;
-      if (selectedImages.length > 0) {
-        const response = await fetch(selectedImages[0]);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        imageBase64 = await new Promise((resolve) => {
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            resolve(base64String.split(',')[1]);
-          };
-          reader.readAsDataURL(blob);
+      if (!isEmergency) {
+        // For 311 reports, handle multiple images
+        const formData = new FormData();
+        formData.append('report_data', JSON.stringify(analysisResult?.report_data));
+        
+        // Append all images
+        if (selectedImages.length > 0) {
+          for (const imageUrl of selectedImages) {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            formData.append('images', blob, 'image.jpg');
+          }
+        }
+
+        const response = await fetch('http://localhost:8000/confirm-311', {
+          method: 'POST',
+          body: formData
         });
-      }
 
-      const url = isEmergency ? 'http://localhost:8000/confirm-911' : 'http://localhost:8000/confirm-311';
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          report_data: analysisResult?.report_data,
-          image_base64: imageBase64
-        })
-      });
+        if (!response.ok) {
+          throw new Error('Failed to submit report');
+        }
 
-      if (!response.ok) {
-        throw new Error('Failed to submit report');
-      }
-
-      const result = await response.json();
-      console.log('Confirmation result:', result);
-      if (isEmergency) {
-        setFeedbackMessage('Emergency services have been notified.');
-      } else {
+        const result = await response.json();
+        console.log('Confirmation result:', result);
         setFeedbackMessage('Report sent to 311 services.');
+      } else {
+        // Convert first image to base64 if it exists
+        let imageBase64 = null;
+        if (selectedImages.length > 0) {
+          const response = await fetch(selectedImages[0]);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          imageBase64 = await new Promise((resolve) => {
+            reader.onloadend = () => {
+              const base64String = reader.result as string;
+              resolve(base64String.split(',')[1]);
+            };
+            reader.readAsDataURL(blob);
+          });
+        }
+
+        const response = await fetch('http://localhost:8000/confirm-911', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            report_data: analysisResult?.report_data,
+            image_base64: imageBase64
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to submit report');
+        }
+
+        const result = await response.json();
+        console.log('Confirmation result:', result);
+        setFeedbackMessage('Emergency services have been notified.');
       }
     } catch (error) {
       console.error('Error submitting report:', error);
       alert('Failed to submit report. Please try again.');
-      // Set the last step to error status if submission fails
       setSteps(prev => prev.map((step, i) => 
         i === prev.length - 1 ? {...step, status: 'error'} : step
       ));

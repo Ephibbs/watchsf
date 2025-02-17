@@ -16,7 +16,7 @@ export default function Header() {
     <header className="w-full py-4 px-8 fixed top-0 z-50">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-red-300 to-red-400 bg-clip-text text-transparent">
-          AI Civic Watch
+          WatchSF
         </h1>
         <nav className="flex gap-4 items-center">
           <a href="#" className="text-gray-600 hover:text-primary transition-colors">About</a>
